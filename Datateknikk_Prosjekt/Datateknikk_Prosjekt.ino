@@ -1,10 +1,9 @@
 #include "swBattery.h"
-#include "menueDraw.h"
+#include "deviceData.h"
 
 
 void setup() {
-  
-  Serial.begin(9600);
+  vehicle_battery = Battery();
 }
 
 void loop() {

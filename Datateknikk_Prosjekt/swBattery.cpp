@@ -22,3 +22,10 @@ void Battery::emergency_charge(){
     emergency_charge_avalable = false;
   }
 }
+
+void Battery::calculate_state_of_health(float average_speed, float max_speed, float time_at_topp_speed){
+  // every 60 seconds
+  // the battery health needs to be based on the average speed,topp speed, time above 70% topp speed
+
+  
+}

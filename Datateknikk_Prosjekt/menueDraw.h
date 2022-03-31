@@ -1,5 +1,2 @@
 #pragma once
-#include "drawDriver.h"
-#include "swBattery.h"
-
-void drawBatteryStatus();
+#include <Zumo32U4.h>
