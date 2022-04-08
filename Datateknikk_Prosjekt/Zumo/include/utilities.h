@@ -8,4 +8,4 @@
 
 
 void calcuateSpeed();
-void calculatedistanceSinceStart();
+void calculateDistanceSinceStart();
