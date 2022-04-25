@@ -4,13 +4,13 @@
 #include "protothreads.h"
 
 #include "deviceData.h"
-
+#include "TurnSensor.h"
 
 #define NUM_SENSORS 5
 unsigned int lineSensorValues[NUM_SENSORS];
 
 int lastError = 0;
-int maxSpeed = 150;
+int maxSpeed = 300;
 float pid_d_const = 3;
 float pid_p_const = 1/3;
 
@@ -23,32 +23,33 @@ Zumo32U4ButtonA button;
 Zumo32U4Motors motors;
 Zumo32U4Encoders encoders;
 Zumo32U4LineSensors lineSensors;
+Zumo32U4IMU imu;
 
 pt ptDrive;
 pt ptSpeed;
 pt ptCalculateAvSpeed;
 pt ptBattery;
+pt ptFindBack;
 
 int speedThread(struct pt* pt);
 int avSpeedThread(struct pt* pt);
 int driveThread(struct pt* pt);
 int batteryThread(struct pt* pt);
+int findBackThread(struct pt* pt);
 
 int speedThread(struct pt* pt){
     PT_BEGIN(pt);
     for(;;){
-        unsigned long sti = millis() + 10;
         float lc = encoders.getCountsLeft();
         float rc = encoders.getCountsRight();
-
         PT_SLEEP(pt,10);                    
         lc = encoders.getCountsLeft() - lc;
         rc = encoders.getCountsRight() - rc;
 
-        
         float average_count = (lc+rc)/2.0;
-
+        
         vehicle_distanceDriven += average_count * 1,36986301369863e-4;
+
         if (average_count >= 7300){
             encoders.getCountsAndResetLeft();
             encoders.getCountsAndResetRight(); 
@@ -76,7 +77,7 @@ int avSpeedThread(struct pt* pt){
             sum += vehicle_s.speed_arr[i];
         }
 
-        vehicle_s.average_speed_60s = sum/60000.00;
+        vehicle_s.average_speed_60s = sum/6000.00;
 
         PT_YIELD(pt);
     }
@@ -108,6 +109,10 @@ int driveThread(struct pt* pt){
         PT_YIELD(pt);
     }
     PT_END(pt);
+}
+
+int findBackThread(struct pt* pt){
+
 }
 
 void calibrateLineSensors(){
@@ -142,8 +147,8 @@ int batteryThread(struct pt* pt){
 void setup() {
     delay(500);
     vehicle_distanceDriven = 0;
-
     lineSensors.initFiveSensors();
+    imu.configureForTurnSensing();
     
     calibrateLineSensors();
 
@@ -154,4 +159,7 @@ void setup() {
 void loop() {
     PT_SCHEDULE(speedThread(&ptSpeed));
     PT_SCHEDULE(driveThread(&ptDrive));
+
+    
+
 }
