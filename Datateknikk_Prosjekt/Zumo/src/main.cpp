@@ -129,23 +129,76 @@ void Master(){
 int serverComThread(struct pt* pt){
     PT_BEGIN(pt);
     for(;;){
-        const int len = 7;
-        byte data[] = {vehicle_state, 
-                       pid_p_const, 
-                       pid_d_const, 
-                       vehicle_s.current_speed, 
-                       vehicle_b.state_of_charge, 
-                       vehicle_b.state_of_health, 
-                       vehicle_b.charging_cycles};
+        u8 tx_data[5];
+        enum  messageID {STATE, PID_P, PID_D, CURRENT_SPEED, SOC, SOH, CHARGE_CYCLES};
+        /*vehicle_state, 
+          pid_p_const, 
+          pid_d_const, 
+          vehicle_s.current_speed, 
+          vehicle_b.state_of_charge, 
+          vehicle_b.state_of_health, 
+          vehicle_b.charging_cycles*/
 
+        tx_data[0] = (byte)STATE;
+        int j = 3;
+        for(int i = 1; i<5; i++){
+            tx_data[i] = ((byte *) &vehicle_state)[j];
+            j--;
+        }
+        Serial.write(tx_data,5);
 
-        Serial.write(data,len);
+        tx_data[0] = (byte)PID_P;
+        j = 3;
+        for(int i = 1; i<5; i++){
+            tx_data[i] = ((byte *) &pid_p_const)[j];
+            j--;
+        }
+        Serial.write(tx_data,5);
+
+        tx_data[0] = (byte)PID_D;
+        j = 3;
+        for(int i = 1; i<5; i++){
+            tx_data[i] = ((byte *) &pid_d_const)[j];
+            j--;
+        }
+        Serial.write(tx_data,5);
+
+        tx_data[0] = (byte)CURRENT_SPEED;
+        j = 3;
+        for(int i = 1; i<5; i++){
+            tx_data[i] = ((byte *) &vehicle_s.current_speed)[j];
+            j--;
+        }
+        Serial.write(tx_data,5);
+
+        tx_data[0] = (byte)SOC;
+        j = 3;
+        for(int i = 1; i<5; i++){
+            tx_data[i] = ((byte *) &vehicle_b.state_of_charge)[j];
+            j--;
+        }
+        Serial.write(tx_data,5);
+
+        tx_data[0] = (byte)SOH;
+        j = 3;
+        for(int i = 1; i<5; i++){
+            tx_data[i] = ((byte *) &vehicle_b.state_of_health)[j];
+            j--;
+        }
+        Serial.write(tx_data,5);
+
+        tx_data[0] = (byte)CHARGE_CYCLES;
+        j = 3;
+        for(int i = 1; i<5; i++){
+            tx_data[i] = ((byte *) &vehicle_b.charging_cycles)[j];
+            j--;
+        }
+        Serial.write(tx_data,5);
 
         PT_YIELD(pt);
     }
     PT_END(pt);
 }
-
 
 // threads and Threads that are responsible for calculating the Speed and battery stuff
 int speed_counter = 0;
