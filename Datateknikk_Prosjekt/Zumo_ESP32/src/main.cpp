@@ -1,8 +1,12 @@
 #include <Arduino.h>
 
+
+byte data[7];
+
 void setup()
 {
     Serial.begin(115200);
+    
 }
 
 void loop()
@@ -11,10 +15,13 @@ void loop()
     byte incomingByte;
     while(Serial.available() > 0) {
     // read the incoming byte:
-    incomingByte = Serial.read();
-    Serial.println(incomingByte);
-    
+    for(int i = 0; i > 7; i++){
+        data[i] = Serial.read();
     }
+    Serial.println(incomingByte);
+    }
+
+
 
 /*
     byte data[] = {vehicle_state, 
