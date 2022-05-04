@@ -144,12 +144,17 @@ int serverComThread(struct pt* pt){
             byte binary[4];
         } binaryFloat;
 
+        String bo = "foja";
+        char her[bo.length()+1];
+        bo.toCharArray(her, bo.length() + 1);
+        Serial1.write(her);
+/*
         binaryFloat pid_d;
         pid_d.floatingPoit = pid_d_const;
 
-        Serial.write(PID_D);
-        Serial.write(pid_d.binary,4);
-
+        Serial1.write(PID_D);
+        Serial1.write(pid_d.binary,4);
+*/
 
         PT_YIELD(pt);
     }
