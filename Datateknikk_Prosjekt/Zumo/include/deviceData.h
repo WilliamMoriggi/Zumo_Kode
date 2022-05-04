@@ -12,6 +12,25 @@ struct vehicle_battery{
     int charging_cycles;
 };
 
+#define NUM_SENSORS 5
+unsigned int lineSensorValues[NUM_SENSORS];
+
 float vehicle_distanceDriven;
 vehicle_speed vehicle_s;
 vehicle_battery vehicle_b;
+
+enum zumoState {IDLE, CHARGING, LINE_FOLLOW, PIZZA};
+
+Zumo32U4ButtonA button;
+Zumo32U4Motors motors;
+Zumo32U4Encoders encoders;
+Zumo32U4LineSensors lineSensors;
+Zumo32U4IMU imu;
+
+int vehicle_state;
+
+int lastError;
+const int maxSpeed = 200;
+
+float pid_d_const;
+float pid_p_const;

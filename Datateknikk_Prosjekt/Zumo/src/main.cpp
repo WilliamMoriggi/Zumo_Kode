@@ -5,39 +5,135 @@
 
 #include "deviceData.h"
 #include "TurnSensor.h"
-
-#define NUM_SENSORS 5
-unsigned int lineSensorValues[NUM_SENSORS];
-
-int lastError = 0;
-int maxSpeed = 300;
-float pid_d_const = 3;
-float pid_p_const = 1/3;
-
-//speed calculation variables
-int speed_counter = 0;
+#include "GridMovement.h"
 
 
 
-Zumo32U4ButtonA button;
-Zumo32U4Motors motors;
-Zumo32U4Encoders encoders;
-Zumo32U4LineSensors lineSensors;
-Zumo32U4IMU imu;
 
-pt ptDrive;
+pt serverCom;
+
 pt ptSpeed;
 pt ptCalculateAvSpeed;
 pt ptBattery;
+
+pt ptLineFollow;
 pt ptFindBack;
 
-int speedThread(struct pt* pt);
+pt ptPizza;
+
+// Declaration of the controll function
+void Master();
+
+// Threads that are responsible for speed and battery calculations
+int serverComThread(struct pt* pt);
+int speedAndBatteryThread(struct pt* pt);
 int avSpeedThread(struct pt* pt);
-int driveThread(struct pt* pt);
+
+// Threads that are responsible for normal line following code
+int lineFollowThread(struct pt* pt);
 int batteryThread(struct pt* pt);
 int findBackThread(struct pt* pt);
 
-int speedThread(struct pt* pt){
+int pizzaThread(struct pt* pt);
+
+
+
+void calibrateLineSensors(){
+    delay(500);
+
+    lineSensors.resetCalibration();
+    
+    for(int i = 0; i < 120; i++){
+    if (i > 30 && i <= 90){
+      motors.setSpeeds(-200, 200);
+    }
+    else{
+      motors.setSpeeds(200, -200);
+    }
+
+    lineSensors.calibrate();
+  }
+  motors.setSpeeds(0, 0);   
+}
+
+void setup() {
+    delay(100);
+    vehicle_state = PIZZA;
+    vehicle_distanceDriven = 0;
+    lastError = 0;
+
+    pid_d_const = 2;
+    pid_p_const = 1/4;
+
+
+    lineSensors.initFiveSensors();
+    turnSensorSetup();
+    
+    calibrateLineSensors();
+    delay(20);
+
+
+    pinMode(13,OUTPUT);
+
+    digitalWrite(13,HIGH);
+    delay(100);
+    digitalWrite(13,LOW);
+
+    PT_INIT(&serverCom);
+    PT_INIT(&ptSpeed);
+    PT_INIT(&ptLineFollow);
+    PT_INIT(&ptPizza);
+
+
+    
+}
+
+void loop() {
+    //PT_SCHEDULE(serverComThread(&serverCom));
+    Master();
+
+}
+
+
+
+
+// State machine
+void Master(){
+    switch(vehicle_state){
+        case IDLE:{
+            motors.setSpeeds(0, 0);
+            break;;
+        }
+        case CHARGING:{
+            // do nothing update the battery state
+            break;
+        }
+        case LINE_FOLLOW:{
+            PT_SCHEDULE(speedAndBatteryThread(&ptSpeed));
+            PT_SCHEDULE(lineFollowThread(&ptLineFollow));
+            break;
+        }
+        case PIZZA:{
+            PT_SCHEDULE(speedAndBatteryThread(&ptSpeed));
+            PT_SCHEDULE(lineFollowThread(&ptLineFollow));
+            PT_SCHEDULE(pizzaThread(&ptPizza));
+            break;
+        }
+        default:
+        break;
+    }
+}
+
+
+// the server com thread that constantly runns to make sure stuff works
+int serverComThread(struct pt* pt){
+    // does stuff
+}
+
+
+// threads and Threads that are responsible for calculating the Speed and battery stuff
+int speed_counter = 0;
+int speedAndBatteryThread(struct pt* pt){
     PT_BEGIN(pt);
     for(;;){
         float lc = encoders.getCountsLeft();
@@ -68,7 +164,6 @@ int speedThread(struct pt* pt){
     PT_END(pt);
 }
 
-
 int avSpeedThread(struct pt* pt){
     PT_BEGIN(pt);
     for(;;){
@@ -84,8 +179,20 @@ int avSpeedThread(struct pt* pt){
     PT_END(pt);
 }
 
+int batteryThread(struct pt* pt){
+    PT_BEGIN(pt);
+    for(;;){
+        vehicle_b.state_of_charge = vehicle_b.state_of_charge*(0.08*vehicle_s.average_speed_60s);
+        Serial.println(vehicle_b.state_of_charge);
 
-int driveThread(struct pt* pt){
+        PT_YIELD(pt);
+    }
+    PT_END(pt);
+}
+
+
+// threads that do the normal line following stuff
+int lineFollowThread(struct pt* pt){
     PT_BEGIN(pt);
     for(;;){
         int position = lineSensors.readLine(lineSensorValues);
@@ -115,51 +222,43 @@ int findBackThread(struct pt* pt){
 
 }
 
-void calibrateLineSensors(){
-    delay(500);
-
-    lineSensors.resetCalibration();
-    
-    for(int i = 0; i < 120; i++){
-    if (i > 30 && i <= 90){
-      motors.setSpeeds(-200, 200);
-    }
-    else{
-      motors.setSpeeds(200, -200);
-    }
-
-    lineSensors.calibrate();
-  }
-  motors.setSpeeds(0, 0);   
-}
-
-int batteryThread(struct pt* pt){
+int x = 2; 
+int y = 3;
+int xDriven = 0;
+int yDriven = 0;
+bool turnher = true;
+//Threads that do the pizza shit
+int pizzaThread(struct pt* pt){
     PT_BEGIN(pt);
     for(;;){
-        vehicle_b.state_of_charge = vehicle_b.state_of_charge*(0.08*vehicle_s.average_speed_60s);
-        Serial.println(vehicle_b.state_of_charge);
 
+        //get X and Y from somewhere??
+        // made these just to have something
+        
+
+        readSensors();
+        if(aboveLine(0) || aboveLine(4)){
+
+            PT_SLEEP(pt,200);
+
+            if(x - xDriven > 0){
+                xDriven++;
+            }
+            else if(y - yDriven > 0){
+                yDriven++;
+            }
+            
+
+            if(y - yDriven == 0 ){
+                vehicle_state = IDLE;
+            }
+            else if (x - xDriven == 0 && turnher){
+                turn('L');
+                turnher = false;
+            }
+        }
+        PT_SLEEP(pt,20);
         PT_YIELD(pt);
     }
     PT_END(pt);
-}
-
-void setup() {
-    delay(500);
-    vehicle_distanceDriven = 0;
-    lineSensors.initFiveSensors();
-    imu.configureForTurnSensing();
-    
-    calibrateLineSensors();
-
-    PT_INIT(&ptSpeed);
-    PT_INIT(&ptDrive);
-}
-
-void loop() {
-    PT_SCHEDULE(speedThread(&ptSpeed));
-    PT_SCHEDULE(driveThread(&ptDrive));
-
-    
-
 }
