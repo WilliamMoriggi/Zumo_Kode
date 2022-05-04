@@ -91,7 +91,6 @@ void setup() {
 void loop() {
     //PT_SCHEDULE(serverComThread(&serverCom));
     Master();
-
 }
 
 
@@ -105,6 +104,7 @@ void Master(){
             break;;
         }
         case CHARGING:{
+            motors.setSpeeds(0, 0);
             // do nothing update the battery state
             break;
         }
@@ -127,7 +127,23 @@ void Master(){
 
 // the server com thread that constantly runns to make sure stuff works
 int serverComThread(struct pt* pt){
-    // does stuff
+    PT_BEGIN(pt);
+    for(;;){
+        const int len = 7;
+        byte data[] = {vehicle_state, 
+                       pid_p_const, 
+                       pid_d_const, 
+                       vehicle_s.current_speed, 
+                       vehicle_b.state_of_charge, 
+                       vehicle_b.state_of_health, 
+                       vehicle_b.charging_cycles};
+
+
+        Serial.write(data,len);
+
+        PT_YIELD(pt);
+    }
+    PT_END(pt);
 }
 
 
