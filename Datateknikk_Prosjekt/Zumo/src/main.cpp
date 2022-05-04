@@ -89,8 +89,8 @@ void setup() {
 }
 
 void loop() {
-    //PT_SCHEDULE(serverComThread(&serverCom));
-    Master();
+    PT_SCHEDULE(serverComThread(&serverCom));
+    //Master();
 }
 
 
@@ -139,61 +139,17 @@ int serverComThread(struct pt* pt){
           vehicle_b.state_of_health, 
           vehicle_b.charging_cycles*/
 
-        tx_data[0] = (byte)STATE;
-        int j = 3;
-        for(int i = 1; i<5; i++){
-            tx_data[i] = ((byte *) &vehicle_state)[j];
-            j--;
-        }
-        Serial.write(tx_data,5);
+        typedef union {
+            float floatingPoit;
+            byte binary[4];
+        } binaryFloat;
 
-        tx_data[0] = (byte)PID_P;
-        j = 3;
-        for(int i = 1; i<5; i++){
-            tx_data[i] = ((byte *) &pid_p_const)[j];
-            j--;
-        }
-        Serial.write(tx_data,5);
+        binaryFloat pid_d;
+        pid_d.floatingPoit = pid_d_const;
 
-        tx_data[0] = (byte)PID_D;
-        j = 3;
-        for(int i = 1; i<5; i++){
-            tx_data[i] = ((byte *) &pid_d_const)[j];
-            j--;
-        }
-        Serial.write(tx_data,5);
+        Serial.write(PID_D);
+        Serial.write(pid_d.binary,4);
 
-        tx_data[0] = (byte)CURRENT_SPEED;
-        j = 3;
-        for(int i = 1; i<5; i++){
-            tx_data[i] = ((byte *) &vehicle_s.current_speed)[j];
-            j--;
-        }
-        Serial.write(tx_data,5);
-
-        tx_data[0] = (byte)SOC;
-        j = 3;
-        for(int i = 1; i<5; i++){
-            tx_data[i] = ((byte *) &vehicle_b.state_of_charge)[j];
-            j--;
-        }
-        Serial.write(tx_data,5);
-
-        tx_data[0] = (byte)SOH;
-        j = 3;
-        for(int i = 1; i<5; i++){
-            tx_data[i] = ((byte *) &vehicle_b.state_of_health)[j];
-            j--;
-        }
-        Serial.write(tx_data,5);
-
-        tx_data[0] = (byte)CHARGE_CYCLES;
-        j = 3;
-        for(int i = 1; i<5; i++){
-            tx_data[i] = ((byte *) &vehicle_b.charging_cycles)[j];
-            j--;
-        }
-        Serial.write(tx_data,5);
 
         PT_YIELD(pt);
     }
