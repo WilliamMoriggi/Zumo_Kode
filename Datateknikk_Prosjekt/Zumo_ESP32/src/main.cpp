@@ -30,12 +30,8 @@ char incomingByte;
 void loop()
 {
     String data_rx = "";
-  if(Serial.available() > 0) {
-      if(Serial.read() == '?'){
-          while(!Serial.read() == '\0' && Serial.available()){
-              data_rx += (String)Serial.read();
-          }
-      }
+  while(Serial.available() > 0 && !Serial.read() == '\0') {
+      data_rx += (String)Serial.read();
   }
 
   switch(data_rx[0]){

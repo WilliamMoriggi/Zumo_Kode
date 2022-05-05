@@ -135,7 +135,6 @@ int serverComThread(struct pt* pt){
         enum  messageID {STATE, PID_P, PID_D, CURRENT_SPEED, SOC, SOH};
 
           // Vehicle State //
-          Serial1.write('?');
           Serial1.write(STATE);
           char state_TX[3];
           dtostrf(vehicle_state, 2,-3, state_TX);
@@ -143,7 +142,6 @@ int serverComThread(struct pt* pt){
           PT_SLEEP(pt,2);
 
           // PID P value //
-          Serial1.write('?');
           Serial1.write(PID_P);
           char PID_p_TX[5];
           dtostrf(pid_p_const, 2,-5, PID_p_TX);
@@ -151,7 +149,6 @@ int serverComThread(struct pt* pt){
           PT_SLEEP(pt,2);
 
           //PID D value //
-          Serial1.write('?');
           Serial1.write(PID_D);
           char PID_d_TX[5];
           dtostrf(pid_d_const, 2,-5, PID_d_TX);
@@ -159,7 +156,6 @@ int serverComThread(struct pt* pt){
           PT_SLEEP(pt,2);
 
           // Current Speed //
-          Serial1.write('?');
           Serial1.write(CURRENT_SPEED);
           char current_speed_TX[6];
           dtostrf(vehicle_s.current_speed, 2,-6, current_speed_TX);
@@ -167,7 +163,6 @@ int serverComThread(struct pt* pt){
           PT_SLEEP(pt,2);
 
           // SOC //
-          Serial1.write('?');
           Serial1.write(SOC);
           char SOC_TX[6];
           dtostrf(vehicle_b.state_of_charge, 2,-6, SOC_TX);
@@ -175,7 +170,6 @@ int serverComThread(struct pt* pt){
           PT_SLEEP(pt,2);
 
           // SOH //
-          Serial1.write('?');
           Serial1.write(SOH);
           char SOH_TX[6];
           dtostrf(vehicle_b.state_of_health, 4,-6, SOH_TX);
