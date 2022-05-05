@@ -65,11 +65,12 @@ void setup() {
     pid_d_const = 2;
     pid_p_const = 1/4;
 
+    Serial1.begin(9600);
 
     lineSensors.initFiveSensors();
     turnSensorSetup();
     
-    calibrateLineSensors();
+    //calibrateLineSensors();
     delay(20);
 
 
@@ -91,6 +92,9 @@ void setup() {
 void loop() {
     PT_SCHEDULE(serverComThread(&serverCom));
     //Master();
+    //char arr[] = {'p', 'o', 'r', 'n'};
+    //Serial1.write(arr);
+    delay(100);
 }
 
 
@@ -129,8 +133,10 @@ void Master(){
 int serverComThread(struct pt* pt){
     PT_BEGIN(pt);
     for(;;){
-        u8 tx_data[5];
         enum  messageID {STATE, PID_P, PID_D, CURRENT_SPEED, SOC, SOH, CHARGE_CYCLES};
+        const int min_width = 6;
+        const int num_digits_after_decimal = 2;
+        char buffer[7];
         /*vehicle_state, 
           pid_p_const, 
           pid_d_const, 
@@ -139,22 +145,7 @@ int serverComThread(struct pt* pt){
           vehicle_b.state_of_health, 
           vehicle_b.charging_cycles*/
 
-        typedef union {
-            float floatingPoit;
-            byte binary[4];
-        } binaryFloat;
-
-        String bo = "foja";
-        char her[bo.length()+1];
-        bo.toCharArray(her, bo.length() + 1);
-        Serial1.write(her);
-/*
-        binaryFloat pid_d;
-        pid_d.floatingPoit = pid_d_const;
-
-        Serial1.write(PID_D);
-        Serial1.write(pid_d.binary,4);
-*/
+          dtostrf(pid_p_const, min_width,num_digits_after_decimal, buffer);
 
         PT_YIELD(pt);
     }
