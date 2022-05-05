@@ -3,12 +3,11 @@
 #include <PubSubClient.h>
 
 
-
-
 WiFiClient espClient;
 PubSubClient clientHerman(espClient);
 String message;
-char msgArr[50];
+#define MESSAGE_LENGTH 20
+char msgArr[MESSAGE_LENGTH];
 
 byte data[7];
 
@@ -19,43 +18,63 @@ void callback(char* topic, byte* message, unsigned int length);
 void reconnect();
 
 int shit = 0;
+
+enum  messageID {STATE, PID_P, PID_D, CURRENT_SPEED, SOC, SOH, CHARGE_CYCLES};
 void setup()
 {
   connectToServer();
   Serial.begin(9600);
-
-
-    
 }
 char incomingByte;
 
-typedef union {
-  float floatingPoit;
-  char binary[2];
-} binaryFloat;
-
-int counter = 0;
-binaryFloat value;
-
-
 void loop()
 {
-  int i = 0;
-  while(Serial.available() > 0) {
-    value.binary[i] = Serial.read();
-    i++;
+    String data_rx = "";
+  if(Serial.available() > 0) {
+      if(Serial.read() == '?'){
+          while(!Serial.read() == '\0' && Serial.available()){
+              data_rx += (String)Serial.read();
+          }
+      }
   }
-  i = 0;
-  
-putThisInLoop();
 
-  message = String(shit);
-  message += ((String)value.floatingPoit);
-  message.toCharArray(msgArr, 50);
-  clientHerman.publish("zumo/debug", msgArr);
-  shit++;
-  if(shit > 10){shit =0;}
-  delay(100);
+  switch(data_rx[0]){
+      data_rx.remove(0);
+      message = data_rx;
+      case STATE:{
+          message = data_rx;
+          message.toCharArray(msgArr, MESSAGE_LENGTH);
+          clientHerman.publish("zumo/currentMode", msgArr);
+          break;
+      }
+      case PID_P:{
+          message.toCharArray(msgArr, MESSAGE_LENGTH);
+          clientHerman.publish("zumo/currentP", msgArr);
+          break;
+      }
+      case PID_D:{
+          message.toCharArray(msgArr, MESSAGE_LENGTH);
+          clientHerman.publish("zumo/currentD", msgArr);
+          break;
+      }
+      case CURRENT_SPEED:{
+          message.toCharArray(msgArr, MESSAGE_LENGTH);
+          clientHerman.publish("zumo/speed", msgArr);
+          break;
+      }
+      case SOC:{
+          message.toCharArray(msgArr, MESSAGE_LENGTH);
+          clientHerman.publish("zumo/SoC", msgArr);
+          break;
+      }
+      case SOH:{
+          message.toCharArray(msgArr, MESSAGE_LENGTH);
+          clientHerman.publish("zumo/SoH", msgArr);
+          break;
+      }
+  }
+
+putThisInLoop();
 }
 
 

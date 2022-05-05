@@ -58,9 +58,11 @@ void calibrateLineSensors(){
 
 void setup() {
     delay(100);
-    vehicle_state = PIZZA;
+    vehicle_state = LINE_FOLLOW;
     vehicle_distanceDriven = 0;
     lastError = 0;
+    Serial1.begin(9600);
+    Serial.begin(9600);
 
     pid_d_const = 2;
     pid_p_const = 1/4;
@@ -91,10 +93,7 @@ void setup() {
 
 void loop() {
     PT_SCHEDULE(serverComThread(&serverCom));
-    //Master();
-    //char arr[] = {'p', 'o', 'r', 'n'};
-    //Serial1.write(arr);
-    delay(100);
+    Master();
 }
 
 
@@ -133,20 +132,57 @@ void Master(){
 int serverComThread(struct pt* pt){
     PT_BEGIN(pt);
     for(;;){
-        enum  messageID {STATE, PID_P, PID_D, CURRENT_SPEED, SOC, SOH, CHARGE_CYCLES};
-        const int min_width = 6;
-        const int num_digits_after_decimal = 2;
-        char buffer[7];
-        /*vehicle_state, 
-          pid_p_const, 
-          pid_d_const, 
-          vehicle_s.current_speed, 
-          vehicle_b.state_of_charge, 
-          vehicle_b.state_of_health, 
-          vehicle_b.charging_cycles*/
+        enum  messageID {STATE, PID_P, PID_D, CURRENT_SPEED, SOC, SOH};
 
-          dtostrf(pid_p_const, min_width,num_digits_after_decimal, buffer);
+          // Vehicle State //
+          Serial1.write('?');
+          Serial1.write(STATE);
+          char state_TX[3];
+          dtostrf(vehicle_state, 2,-3, state_TX);
+          Serial1.write(state_TX);
+          PT_SLEEP(pt,2);
 
+          // PID P value //
+          Serial1.write('?');
+          Serial1.write(PID_P);
+          char PID_p_TX[5];
+          dtostrf(pid_p_const, 2,-5, PID_p_TX);
+          Serial1.write(PID_p_TX);
+          PT_SLEEP(pt,2);
+
+          //PID D value //
+          Serial1.write('?');
+          Serial1.write(PID_D);
+          char PID_d_TX[5];
+          dtostrf(pid_d_const, 2,-5, PID_d_TX);
+          Serial1.write(PID_d_TX);
+          PT_SLEEP(pt,2);
+
+          // Current Speed //
+          Serial1.write('?');
+          Serial1.write(CURRENT_SPEED);
+          char current_speed_TX[6];
+          dtostrf(vehicle_s.current_speed, 2,-6, current_speed_TX);
+          Serial1.write(current_speed_TX);
+          PT_SLEEP(pt,2);
+
+          // SOC //
+          Serial1.write('?');
+          Serial1.write(SOC);
+          char SOC_TX[6];
+          dtostrf(vehicle_b.state_of_charge, 2,-6, SOC_TX);
+          Serial1.write(SOC_TX);
+          PT_SLEEP(pt,2);
+
+          // SOH //
+          Serial1.write('?');
+          Serial1.write(SOH);
+          char SOH_TX[6];
+          dtostrf(vehicle_b.state_of_health, 4,-6, SOH_TX);
+          Serial1.write(SOH_TX);
+          PT_SLEEP(pt,2);
+
+          
         PT_YIELD(pt);
     }
     PT_END(pt);
