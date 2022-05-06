@@ -15,13 +15,11 @@ void serverCom();
 
 
 
-
-
 void setup() {
-    Serial1.begin(9600);
+    Serial1.begin(9600);              // starter serial1 som brukes til å sende
     Serial.begin(9600);
 
-    millisOld = millis();
+    millisOld = millis(); 
 }
 
 void loop() {
@@ -33,19 +31,19 @@ void loop() {
 
 
 
-
-
 void serverCom(){
+
+    // Melding struktur //
     /*
-        // Vehicle State //
-        char state_TX[3];
-        dtostrf(vehicle_state, -1,0, state_TX);
-        Serial1.write('|');
-        Serial1.write('A');
-        Serial1.write(state_TX);
-        Serial1.write(';');
+
+    |       -    viser til starten av meldingen
+    A-Z     -    melding ID
+    [ ]     -    det meldingen indeholder
+    ;       -    viser til slutten av meldingen
+
     */
-    
+
+
           // Current Speed //
           current_speed = 150;
         char current_speed_TX[7];
@@ -54,14 +52,6 @@ void serverCom(){
         Serial1.write('B');
         Serial1.write(current_speed_TX);
         Serial1.write(';');
-
-        Serial.print('|');
-        Serial.print('B');
-        Serial.print(current_speed_TX);
-        Serial.print(';');
-        Serial.print('\n');
-        
-
 
           // SOC //
           state_of_charge = 89;
