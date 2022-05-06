@@ -7,7 +7,7 @@
 
 const uint16_t turnSpeed = 150;
 
-const uint16_t sensorThreshold = 150;
+const uint16_t sensorThreshold = 300;
 
 // Takes calibrated readings of the lines sensors and stores them
 // in lineSensorValues.  Also returns an estimation of the line

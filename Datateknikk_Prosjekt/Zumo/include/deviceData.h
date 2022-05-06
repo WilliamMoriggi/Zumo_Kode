@@ -19,7 +19,7 @@ float vehicle_distanceDriven;
 vehicle_speed vehicle_s;
 vehicle_battery vehicle_b;
 
-enum zumoState {IDLE, CHARGING, LINE_FOLLOW, PIZZA};
+enum zumoState {IDLE, CHARGING, LINE_FOLLOW, PIZZA, FIND_BACK};
 
 Zumo32U4ButtonA button;
 Zumo32U4Motors motors;
@@ -30,7 +30,7 @@ Zumo32U4IMU imu;
 int vehicle_state;
 
 int lastError;
-const int maxSpeed = 200;
+const int maxSpeed = 150;
 
 float pid_d_const;
 float pid_p_const;

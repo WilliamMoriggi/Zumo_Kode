@@ -25,7 +25,6 @@ pt ptPizza;
 void Master();
 
 // Threads that are responsible for speed and battery calculations
-int serverComThread(struct pt* pt);
 int speedAndBatteryThread(struct pt* pt);
 int avSpeedThread(struct pt* pt);
 
@@ -39,7 +38,7 @@ int pizzaThread(struct pt* pt);
 
 
 void calibrateLineSensors(){
-    delay(500);
+    delay(200);
 
     lineSensors.resetCalibration();
     
@@ -57,14 +56,14 @@ void calibrateLineSensors(){
 }
 
 void setup() {
-    Serial1.begin(9600);
     delay(100);
-    vehicle_state = LINE_FOLLOW;
+    vehicle_state = PIZZA;
     vehicle_distanceDriven = 0;
     lastError = 0;
 
+    // P og D konstanter 
     pid_d_const = 2;
-    pid_p_const = 1/4;
+    pid_p_const = 1/6;
 
 
     lineSensors.initFiveSensors();
@@ -80,33 +79,30 @@ void setup() {
     delay(100);
     digitalWrite(13,LOW);
 
-    PT_INIT(&serverCom);
     PT_INIT(&ptSpeed);
     PT_INIT(&ptLineFollow);
     PT_INIT(&ptPizza);
-
-
-    
 }
 
 void loop() {
-    //PT_SCHEDULE(serverComThread(&serverCom));
     Master();
 }
 
 
 
 
-// State machine
 void Master(){
     switch(vehicle_state){
         case IDLE:{
             motors.setSpeeds(0, 0);
-            break;;
+            digitalWrite(13,HIGH);
+            delay(200);
+            digitalWrite(13,LOW);
+            break;
         }
         case CHARGING:{
             motors.setSpeeds(0, 0);
-            // do nothing update the battery state
+            // komunikation med server om batte
             break;
         }
         case LINE_FOLLOW:{
@@ -115,26 +111,20 @@ void Master(){
             break;
         }
         case PIZZA:{
-            PT_SCHEDULE(speedAndBatteryThread(&ptSpeed));
+            //PT_SCHEDULE(speedAndBatteryThread(&ptSpeed));
             PT_SCHEDULE(lineFollowThread(&ptLineFollow));
             PT_SCHEDULE(pizzaThread(&ptPizza));
+            break;
+        }
+        case FIND_BACK:{
+            //PT_SCHEDULE(speedAndBatteryThread(&ptSpeed));
+            PT_SCHEDULE(lineFollowThread(&ptLineFollow));
+            PT_SCHEDULE(findBackThread(&ptFindBack));
             break;
         }
         default:
         break;
     }
-}
-
-
-// the server com thread that constantly runns to make sure stuff works
-int serverComThread(struct pt* pt){
-    PT_BEGIN(pt);
-    for(;;){
-        
-
-        PT_YIELD(pt);
-    }
-    PT_END(pt);
 }
 
 
@@ -225,12 +215,8 @@ int lineFollowThread(struct pt* pt){
     PT_END(pt);
 }
 
-int findBackThread(struct pt* pt){
-
-}
-
 int x = 2; 
-int y = 3;
+int y = 2;
 int xDriven = 0;
 int yDriven = 0;
 bool turnher = true;
@@ -238,15 +224,11 @@ bool turnher = true;
 int pizzaThread(struct pt* pt){
     PT_BEGIN(pt);
     for(;;){
-
-        //get X and Y from somewhere??
-        // made these just to have something
-        
-
         readSensors();
         if(aboveLine(0) || aboveLine(4)){
-
+            digitalWrite(13,HIGH);
             PT_SLEEP(pt,200);
+             digitalWrite(13,LOW);
 
             if(x - xDriven > 0){
                 xDriven++;
@@ -256,8 +238,13 @@ int pizzaThread(struct pt* pt){
             }
             
 
-            if(y - yDriven == 0 ){
-                vehicle_state = IDLE;
+            if(y - yDriven == 0 ){   
+                turn('L');
+                turn('L');
+                xDriven = 0;
+                yDriven = 0;
+                turnher = true;
+                vehicle_state = FIND_BACK;
             }
             else if (x - xDriven == 0 && turnher){
                 turn('L');
@@ -265,6 +252,40 @@ int pizzaThread(struct pt* pt){
             }
         }
         PT_SLEEP(pt,20);
+        PT_YIELD(pt);
+    }
+    PT_END(pt);
+}
+
+int findBackThread(struct pt* pt){
+    PT_BEGIN(pt);
+    for(;;){
+        
+        readSensors();
+        if(aboveLine(0) || aboveLine(4)){
+
+            PT_SLEEP(pt,200);
+
+            if(y - yDriven > 0){
+                yDriven++;
+            }
+            else if(x - xDriven > 0){
+                xDriven++;
+            }
+            
+            if(x - xDriven == 0 ){
+                turn('B');
+                turn('B');
+                PT_SLEEP(pt,2600);
+                vehicle_state = IDLE;
+            }
+            else if (y - yDriven == 0 && turnher){
+                turn('R');
+                turnher = false;
+            }
+        }
+        PT_SLEEP(pt,20);
+
         PT_YIELD(pt);
     }
     PT_END(pt);
