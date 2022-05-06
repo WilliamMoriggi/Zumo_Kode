@@ -1,118 +1,123 @@
 #include <Arduino.h>
+#include <string.h>
 #include <WiFi.h>
 #include <PubSubClient.h>
 
+enum  messageID {STATE, PID_P, PID_D, CURRENT_SPEED, SOC, SOH, CHARGE_CYCLES};
 
 WiFiClient espClient;
-PubSubClient clientHerman(espClient);
-String message;
-#define MESSAGE_LENGTH 20
-char msgArr[MESSAGE_LENGTH];
+PubSubClient client(espClient);
 
-byte data[7];
-
-void connectToServer(); //putt i setup
-
-void putThisInLoop(); // putt i loop
+void connectToServer();
 void callback(char* topic, byte* message, unsigned int length);
 void reconnect();
+void checkConection();
 
-int shit = 0;
 
-enum  messageID {STATE, PID_P, PID_D, CURRENT_SPEED, SOC, SOH, CHARGE_CYCLES};
-void setup()
-{
+void setup(){
   connectToServer();
   Serial.begin(9600);
 }
-char incomingByte;
 
-void loop()
-{
-    String data_rx = "";
-  while(Serial.available() > 0 && !Serial.read() == '\0') {
-      data_rx += (String)Serial.read();
+
+void loop(){
+    checkConection();
+
+              //Lokale variabler som brukes for å lese av og sende videre dataen som kommer inn via RX og TX
+    char data_rx;                                       
+    char message[10];
+    int counter = 0;
+    bool messageReceved = false;
+    bool start = false;
+
+    while(Serial.available()>0 && !messageReceved) {         // Sjekker det er noe i bufferet, og om det leses en melding
+        data_rx = Serial.read();                             // leser en byte ut fra bufferet
+        if(data_rx > 32 && data_rx < 126 && start){          // sjekker om byten man leser av vil tillsvare en bokstav, tall eller symboler
+            if(data_rx != ';'){                              // sjekker om det er enden av meldingen
+                message[counter] = data_rx;                  // dersom det ikke er enden av meldingen legges den inn i ett char array
+                counter++;
+            }
+            else{                                            
+                message[counter] = '\0';                     // dersom meldingen er ferding legged det ved en \0 som ender char arrayet
+                messageReceved = true;                       // gjør om messageReceved til true, dette vil få koden ut av while loopen
+                Serial.flush();                              // tømmer bufferet for å slippe å overflowe
+            }
+        }
+        if(data_rx == '|'){start = true;}                    // sjekker om det er starten av meldingen og tillater koden å lese det neste som kommer
+    } 
+    
+delay(100);
+
+char ID = message[0];                                        // finner IDen til meldingen som brukes for å bestemme hvor den sendes
+  switch(ID){
+      case 'A':{
+          client.publish("zumo/currentMode", message);
+          break;
+      }
+      case 'X':{
+          client.publish("zumo/currentP", message);
+          break;
+      }
+      case 'Y':{
+          client.publish("zumo/currentD", message);
+          break;
+      }
+      case 'B':{
+          client.publish("zumo/speed", message);
+          break;
+      }
+      case 'C':{
+          client.publish("zumo/SoC", message);
+          break;
+      }
+      case 'D':{
+          client.publish("zumo/SoH", message);
+          break;
+      }
+      delay(100);
   }
-
-  switch(data_rx[0]){
-      data_rx.remove(0);
-      message = data_rx;
-      case STATE:{
-          message = data_rx;
-          message.toCharArray(msgArr, MESSAGE_LENGTH);
-          clientHerman.publish("zumo/currentMode", msgArr);
-          break;
-      }
-      case PID_P:{
-          message.toCharArray(msgArr, MESSAGE_LENGTH);
-          clientHerman.publish("zumo/currentP", msgArr);
-          break;
-      }
-      case PID_D:{
-          message.toCharArray(msgArr, MESSAGE_LENGTH);
-          clientHerman.publish("zumo/currentD", msgArr);
-          break;
-      }
-      case CURRENT_SPEED:{
-          message.toCharArray(msgArr, MESSAGE_LENGTH);
-          clientHerman.publish("zumo/speed", msgArr);
-          break;
-      }
-      case SOC:{
-          message.toCharArray(msgArr, MESSAGE_LENGTH);
-          clientHerman.publish("zumo/SoC", msgArr);
-          break;
-      }
-      case SOH:{
-          message.toCharArray(msgArr, MESSAGE_LENGTH);
-          clientHerman.publish("zumo/SoH", msgArr);
-          break;
-      }
-  }
-
-putThisInLoop();
 }
-
 
 void connectToServer(){ // putt i setup()
 
   // KOBLE SEG TIL INTERNETT
   const char* ssid = "FBI surveillance van"; // Internett navn
   const char* password = "dennis123"; // Internett passord
-  const char* mqtt_server = "192.168.208.224"; // RaspberryPi IP
-  
+  const char* mqtt_server = "192.168.212.224"; // RaspberryPi IP
   delay(10);
-  
   WiFi.begin(ssid, password);
 
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
-    Serial.print(".");
   }
-
-  Serial.println(WiFi.localIP());
 
   // KOBLE SEG TIL MQTT SERVER / RaspberryPi
-  clientHerman.setServer(mqtt_server, 1883);
-  clientHerman.setCallback(callback);
+  client.setServer(mqtt_server, 1883);
+  client.setCallback(callback);
 }
 
-void putThisInLoop(){
-  if(!clientHerman.connected()){
+void checkConection(){
+  if(!client.connected()){
     reconnect();
   }
-  clientHerman.loop();
+  client.loop();
 }
 
+// --------------------------------------------------------
+// Funksjoner som brukes i andre. Trengs ikke å brukes, med unntak av lesing av meldinger i callback.
+// --------------------------------------------------------
 void callback(char* topic, byte* message, unsigned int length){
   String messageTemp;
+  
   for (int i = 0; i < length; i++) {
     messageTemp += (char)message[i];
   }
+
 }
+
 void reconnect(){ // her må alle paths legges til
-  while(!clientHerman.connected()){ // Loop until we're reconnected
-    if (clientHerman.connect("ESP8266Client")){ // Attempt to connect
+  while(!client.connected()){ // Loop until we're reconnected
+    if (client.connect("ESP8266Client")){ // Attempt to connect
     }
     else{
       delay(5000);

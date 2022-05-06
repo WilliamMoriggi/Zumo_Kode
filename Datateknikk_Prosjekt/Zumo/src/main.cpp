@@ -4,312 +4,82 @@
 #include "protothreads.h"
 
 #include "deviceData.h"
-#include "TurnSensor.h"
 #include "GridMovement.h"
 
 
 
 
-pt serverCom;
-
-pt ptSpeed;
-pt ptCalculateAvSpeed;
-pt ptBattery;
-
-pt ptLineFollow;
-pt ptFindBack;
-
-pt ptPizza;
-
-// Declaration of the controll function
-void Master();
-
 // Threads that are responsible for speed and battery calculations
-int serverComThread(struct pt* pt);
-int speedAndBatteryThread(struct pt* pt);
-int avSpeedThread(struct pt* pt);
-
-// Threads that are responsible for normal line following code
-int lineFollowThread(struct pt* pt);
-int batteryThread(struct pt* pt);
-int findBackThread(struct pt* pt);
-
-int pizzaThread(struct pt* pt);
+void serverCom();
 
 
 
-void calibrateLineSensors(){
-    delay(500);
 
-    lineSensors.resetCalibration();
-    
-    for(int i = 0; i < 120; i++){
-    if (i > 30 && i <= 90){
-      motors.setSpeeds(-200, 200);
-    }
-    else{
-      motors.setSpeeds(200, -200);
-    }
 
-    lineSensors.calibrate();
-  }
-  motors.setSpeeds(0, 0);   
-}
 
 void setup() {
-    delay(100);
-    vehicle_state = LINE_FOLLOW;
-    vehicle_distanceDriven = 0;
-    lastError = 0;
     Serial1.begin(9600);
     Serial.begin(9600);
 
-    pid_d_const = 2;
-    pid_p_const = 1/4;
-
-    Serial1.begin(9600);
-
-    lineSensors.initFiveSensors();
-    turnSensorSetup();
-    
-    //calibrateLineSensors();
-    delay(20);
-
-
-    pinMode(13,OUTPUT);
-
-    digitalWrite(13,HIGH);
-    delay(100);
-    digitalWrite(13,LOW);
-
-    PT_INIT(&serverCom);
-    PT_INIT(&ptSpeed);
-    PT_INIT(&ptLineFollow);
-    PT_INIT(&ptPizza);
-
-
-    
+    millisOld = millis();
 }
 
 void loop() {
-    PT_SCHEDULE(serverComThread(&serverCom));
-    Master();
+    if (millis() > millisOld + 250){
+        serverCom();
+        millisOld = millis();
+    }     
 }
 
 
 
 
-// State machine
-void Master(){
-    switch(vehicle_state){
-        case IDLE:{
-            motors.setSpeeds(0, 0);
-            break;;
-        }
-        case CHARGING:{
-            motors.setSpeeds(0, 0);
-            // do nothing update the battery state
-            break;
-        }
-        case LINE_FOLLOW:{
-            PT_SCHEDULE(speedAndBatteryThread(&ptSpeed));
-            PT_SCHEDULE(lineFollowThread(&ptLineFollow));
-            break;
-        }
-        case PIZZA:{
-            PT_SCHEDULE(speedAndBatteryThread(&ptSpeed));
-            PT_SCHEDULE(lineFollowThread(&ptLineFollow));
-            PT_SCHEDULE(pizzaThread(&ptPizza));
-            break;
-        }
-        default:
-        break;
-    }
-}
 
-
-// the server com thread that constantly runns to make sure stuff works
-int serverComThread(struct pt* pt){
-    PT_BEGIN(pt);
-    for(;;){
-        enum  messageID {STATE, PID_P, PID_D, CURRENT_SPEED, SOC, SOH};
-
-          // Vehicle State //
-          Serial1.write(STATE);
-          char state_TX[3];
-          dtostrf(vehicle_state, 2,-3, state_TX);
-          Serial1.write(state_TX);
-          PT_SLEEP(pt,2);
-
-          // PID P value //
-          Serial1.write(PID_P);
-          char PID_p_TX[5];
-          dtostrf(pid_p_const, 2,-5, PID_p_TX);
-          Serial1.write(PID_p_TX);
-          PT_SLEEP(pt,2);
-
-          //PID D value //
-          Serial1.write(PID_D);
-          char PID_d_TX[5];
-          dtostrf(pid_d_const, 2,-5, PID_d_TX);
-          Serial1.write(PID_d_TX);
-          PT_SLEEP(pt,2);
-
+void serverCom(){
+    /*
+        // Vehicle State //
+        char state_TX[3];
+        dtostrf(vehicle_state, -1,0, state_TX);
+        Serial1.write('|');
+        Serial1.write('A');
+        Serial1.write(state_TX);
+        Serial1.write(';');
+    */
+    
           // Current Speed //
-          Serial1.write(CURRENT_SPEED);
-          char current_speed_TX[6];
-          dtostrf(vehicle_s.current_speed, 2,-6, current_speed_TX);
-          Serial1.write(current_speed_TX);
-          PT_SLEEP(pt,2);
+          current_speed = 150;
+        char current_speed_TX[7];
+        dtostrf(current_speed, -6,2, current_speed_TX);
+        Serial1.write('|');
+        Serial1.write('B');
+        Serial1.write(current_speed_TX);
+        Serial1.write(';');
+
+        Serial.print('|');
+        Serial.print('B');
+        Serial.print(current_speed_TX);
+        Serial.print(';');
+        Serial.print('\n');
+        
+
 
           // SOC //
-          Serial1.write(SOC);
-          char SOC_TX[6];
-          dtostrf(vehicle_b.state_of_charge, 2,-6, SOC_TX);
-          Serial1.write(SOC_TX);
-          PT_SLEEP(pt,2);
+          state_of_charge = 89;
+        char SOC_TX[7];
+        dtostrf(state_of_charge, -6,2, SOC_TX);
+        Serial1.write('|');
+        Serial1.write('C');
+        Serial1.write(SOC_TX);
+        Serial1.write(';');
 
           // SOH //
-          Serial1.write(SOH);
-          char SOH_TX[6];
-          dtostrf(vehicle_b.state_of_health, 4,-6, SOH_TX);
-          Serial1.write(SOH_TX);
-          PT_SLEEP(pt,2);
+          state_of_health = 0.234;
+        Serial1.write(SOH);
+        char SOH_TX[7];
+        dtostrf(state_of_health, -6,5, SOH_TX);
+        Serial1.write('|');
+        Serial1.write('D');
+        Serial1.write(SOH_TX);
+        Serial1.write(';');
 
-          
-        PT_YIELD(pt);
-    }
-    PT_END(pt);
-}
-
-// threads and Threads that are responsible for calculating the Speed and battery stuff
-int speed_counter = 0;
-int speedAndBatteryThread(struct pt* pt){
-    PT_BEGIN(pt);
-    for(;;){
-        float lc = encoders.getCountsLeft();
-        float rc = encoders.getCountsRight();
-        PT_SLEEP(pt,10);                    
-        lc = encoders.getCountsLeft() - lc;
-        rc = encoders.getCountsRight() - rc;
-
-        float average_count = (lc+rc)/2.0;
-        
-        vehicle_distanceDriven += average_count * 1,36986301369863e-4;
-
-        if (average_count >= 7300){
-            encoders.getCountsAndResetLeft();
-            encoders.getCountsAndResetRight(); 
-        }
-
-        vehicle_s.current_speed = 10.0*average_count;
-
-
-        if(speed_counter == 5999){
-            PT_SPAWN(pt, &ptCalculateAvSpeed, avSpeedThread(&ptCalculateAvSpeed));
-            speed_counter = 0;
-        }
-
-        PT_YIELD(pt);
-    }
-    PT_END(pt);
-}
-
-int avSpeedThread(struct pt* pt){
-    PT_BEGIN(pt);
-    for(;;){
-        uint32_t sum = 0;
-        for(int i = 0; i>6000; i++){
-            sum += vehicle_s.speed_arr[i];
-        }
-
-        vehicle_s.average_speed_60s = sum/6000.00;
-
-        PT_YIELD(pt);
-    }
-    PT_END(pt);
-}
-
-int batteryThread(struct pt* pt){
-    PT_BEGIN(pt);
-    for(;;){
-        vehicle_b.state_of_charge = vehicle_b.state_of_charge*(0.08*vehicle_s.average_speed_60s);
-        Serial.println(vehicle_b.state_of_charge);
-
-        PT_YIELD(pt);
-    }
-    PT_END(pt);
-}
-
-
-// threads that do the normal line following stuff
-int lineFollowThread(struct pt* pt){
-    PT_BEGIN(pt);
-    for(;;){
-        int position = lineSensors.readLine(lineSensorValues);
-        if (position > 1500|| position > 2500){
-            int error = position - 2000;
-            int speedDifference = error*pid_d_const + pid_d_const * (error - lastError);
-            lastError = error;
-
-            int leftSpeed = (int)maxSpeed + speedDifference;
-            int rightSpeed = (int)maxSpeed - speedDifference;
-
-            leftSpeed = constrain(leftSpeed, 0, (int)maxSpeed);
-            rightSpeed = constrain(rightSpeed, 0, (int)maxSpeed);
-            
-            motors.setSpeeds(leftSpeed, rightSpeed);
-        }
-        else{
-            motors.setSpeeds(100,100);
-        }
-        
-        PT_YIELD(pt);
-    }
-    PT_END(pt);
-}
-
-int findBackThread(struct pt* pt){
-
-}
-
-int x = 2; 
-int y = 3;
-int xDriven = 0;
-int yDriven = 0;
-bool turnher = true;
-//Threads that do the pizza shit
-int pizzaThread(struct pt* pt){
-    PT_BEGIN(pt);
-    for(;;){
-
-        //get X and Y from somewhere??
-        // made these just to have something
-        
-
-        readSensors();
-        if(aboveLine(0) || aboveLine(4)){
-
-            PT_SLEEP(pt,200);
-
-            if(x - xDriven > 0){
-                xDriven++;
-            }
-            else if(y - yDriven > 0){
-                yDriven++;
-            }
-            
-
-            if(y - yDriven == 0 ){
-                vehicle_state = IDLE;
-            }
-            else if (x - xDriven == 0 && turnher){
-                turn('L');
-                turnher = false;
-            }
-        }
-        PT_SLEEP(pt,20);
-        PT_YIELD(pt);
-    }
-    PT_END(pt);
 }
