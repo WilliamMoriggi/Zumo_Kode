@@ -57,8 +57,9 @@ void calibrateLineSensors(){
 }
 
 void setup() {
+    Serial1.begin(9600);
     delay(100);
-    vehicle_state = PIZZA;
+    vehicle_state = LINE_FOLLOW;
     vehicle_distanceDriven = 0;
     lastError = 0;
 
@@ -129,17 +130,7 @@ void Master(){
 int serverComThread(struct pt* pt){
     PT_BEGIN(pt);
     for(;;){
-        const int len = 7;
-        byte data[] = {vehicle_state, 
-                       pid_p_const, 
-                       pid_d_const, 
-                       vehicle_s.current_speed, 
-                       vehicle_b.state_of_charge, 
-                       vehicle_b.state_of_health, 
-                       vehicle_b.charging_cycles};
-
-
-        Serial.write(data,len);
+        
 
         PT_YIELD(pt);
     }

@@ -28,19 +28,8 @@ bool aboveLine(uint8_t sensorIndex)
 void turn(char dir)
 {
   turnSensorReset();
-  uint8_t sensorIndex;
   switch(dir)
   {
-  case 'B':
-    // Turn left 125 degrees using the gyro.
-    motors.setSpeeds(-turnSpeed, turnSpeed);
-    while((int32_t)turnAngle < turnAngle180){
-        digitalWrite(13,HIGH);
-        turnSensorUpdate();
-    }
-    digitalWrite(13,LOW);
-    break;
-
   case 'L':
     // Turn left 45 degrees using the gyro.
     motors.setSpeeds(-turnSpeed, turnSpeed);
@@ -65,13 +54,4 @@ void turn(char dir)
     // This should not happen.
     return;
   }
-  /*
-    while(1)
-  {
-    if (readSensors() <= 2200 || readSensors() >= 1800)
-    {
-      break;
-    }
-  }
-  */
 }
